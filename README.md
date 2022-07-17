@@ -1,7 +1,7 @@
 ## livetweets
 
 Requirements:
-Docker
+Docker  
 Twitter API 2.0 Bearer Token
 
 To use:
