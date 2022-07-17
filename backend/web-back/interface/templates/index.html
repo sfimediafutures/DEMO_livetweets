@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+{% load static %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% bootstrap_messages %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LiveTweets</title>
+    <link rel="icon" type="image/x-icon" href={% static 'favicon.ico' %}>
+    <script>
+        window.twttr = (function(d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0],
+            t = window.twttr || {};
+          if (d.getElementById(id)) return t;
+          js = d.createElement(s);
+          js.id = id;
+          js.src = "https://platform.twitter.com/widgets.js";
+          fjs.parentNode.insertBefore(js, fjs);
+
+          t._e = [];
+          t.ready = function(f) {
+            t._e.push(f);
+          };
+
+          return t;
+        }(document, "script", "twitter-wjs"));
+        let tweetSocket = null;
+        function websocketconnect() {
+        tweetSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/tweets'
+        );
+        tweetSocket.onopen = function () {
+            document.getElementById('status').innerHTML = 'Connected to backend';
+            document.getElementById("connectbtn").classList.add('disabled');
+            document.getElementById("loadbtn").classList.remove('disabled');
+        }
+        tweetSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log(data)
+            let tweetfeed = document.getElementById('tweetfeed');
+            let tweetframe = document.createElement('blockquote');
+            if (data.type === 'tweet') {
+            twttr.widgets.createTweet(data.id, tweetframe, {
+                conversation: 'all',
+                width: '275',
+                theme: 'light',
+                dnt: 'true',
+                align: 'center'
+            }).then(tweetfeed.insertBefore(tweetframe, tweetfeed.firstChild));
+            if (tweetfeed.childElementCount > 10) {
+                tweetfeed.removeChild(tweetfeed.lastChild);
+            }
+            }
+            if (data.type === 'status') {
+                document.getElementById('status').innerHTML = data.stream;
+
+            }
+            if (data.type === 'rule') {
+                const ruleframe = document.getElementById(data.tag);
+                ruleframe.children[1].innerHTML = data.filter;
+            }
+            if (data.type === 'hmc') {
+                let hashtagtable = document.createElement('table');
+                let htable = document.getElementById('hashtagtable')
+                hashtagtable.classList.add("table")
+                hashtagtable.id = 'hashtagtable'
+                let i = 0;
+                data.hashtags.reverse();
+                data.hashtags.forEach( function(tag) {
+                    var t, c, r;
+                    r = hashtagtable.insertRow(i);
+                    t = r.insertCell(0);
+                    t.innerHTML = '#'+tag.hashtag
+                    c = r.insertCell(1);
+                    c.innerHTML = tag.count
+                })
+                htable.parentNode.replaceChild(hashtagtable, htable);
+                let mentiontable = document.createElement('table');
+                let mtable = document.getElementById('mentiontable')
+                mentiontable.classList.add("table")
+                mentiontable.id = 'mentiontable'
+                i = 0;
+                data.mentions.reverse();
+                data.mentions.forEach( function(mention) {
+                    var t, c, r;
+                    r = mentiontable.insertRow(i);
+                    t = r.insertCell(0);
+                    t.innerHTML = '@'+mention.mention
+                    c = r.insertCell(1);
+                    c.innerHTML = mention.count
+                })
+                mtable.parentNode.replaceChild(mentiontable, mtable);
+                let contexttable = document.createElement('table');
+                let ctable = document.getElementById('contexttable');
+                contexttable.classList.add("table");
+                contexttable.id = 'contexttable';
+                i = 0;
+                data.contexts.reverse();
+                data.contexts.forEach( function(contexts) {
+                    var r, n, a, c
+                    r = contexttable.insertRow(i);
+                    r.id = contexts.id
+                    n = r.insertCell(0);
+                    n.innerHTML = contexts.name
+                    c = r.insertCell(1);
+                    c.innerHTML = contexts.count
+                });
+                ctable.parentNode.replaceChild(contexttable, ctable);
+            }
+            if (data.type === 'rulestatus') {
+                if (data.stream === 'No rules stored in stream') {
+                    let textareas = Array.from(document.getElementsByClassName('filtertext'));
+                    textareas.map(x => x.value = '');
+
+                }
+            }
+            if (data.type === 'tweetmetrics') {
+                let cont_30 = document.getElementById('30scontainer');
+                let cont_60 = document.getElementById('1mincontainer');
+                let cont_180 = document.getElementById('3mincontainer');
+                let ncont_30 = document.createElement("div");
+                let ncont_60 = document.createElement("div");
+                let ncont_180 = document.createElement("div");
+                ncont_30.id = '30scontainer';
+                ncont_60.id = '1mincontainer';
+                ncont_180.id = '3mincontainer';
+                let tweetframe_30 = document.createElement('div');
+                let tweetframe_60 = document.createElement('div');
+                let tweetframe_180 = document.createElement('div');
+                data.results['30'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '350',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_30.append(tweetframe);
+                });
+                ncont_30.append(tweetframe_30);
+                data.results['60'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '350',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_60.append(tweetframe);
+
+                });
+                ncont_60.append(tweetframe_60);
+                data.results['180'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '350',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_180.append(tweetframe);
+
+                });
+                ncont_180.append(tweetframe_180);
+                cont_30.parentNode.replaceChild(ncont_30, cont_30);
+                cont_60.parentNode.replaceChild(ncont_60, cont_60);
+                cont_180.parentNode.replaceChild(ncont_180, cont_180);
+            }
+        };
+        tweetSocket.onclose = function () {
+            document.getElementById('status').innerHTML = 'Socket not connected'
+            document.getElementById("connectbtn").classList.remove('disabled');
+            document.getElementById("startbtn").classList.add('disabled');
+            document.getElementById("stopbtn").classList.add('disabled');
+        };
+        }
+        function loadstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'loadstream'
+            }))
+            document.getElementById("loadbtn").classList.add('disabled');
+            document.getElementById("startbtn").classList.remove('disabled');
+            document.getElementById("filtersbtn").classList.remove('disabled');
+            document.getElementById("removefiltersbtn").classList.remove('disabled');
+        }
+        function startstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'startstream'
+            }))
+            document.getElementById("stopbtn").classList.remove('disabled');
+        }
+        function stopstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'stopstream'
+            }))
+        }
+        function applyfilters() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'rulelist',
+                'rules': [
+                    {
+                        'value': document.getElementById('rule1text').value,
+                        'tag': 'customfilter'
+                    },
+                    {
+                        'value': document.getElementById('rule2text').value,
+                        'tag': 'hashtagsfilter'
+                    },
+                    {
+                        'value': document.getElementById('rule3text').value,
+                        'tag': 'mentionsfilter'
+                    },
+                    {
+                        'value': document.getElementById('rule4text').value,
+                        'tag': 'contextsfilter'
+                    },
+                    {
+                        'value': document.getElementById('rule5text').value,
+                        'tag': 'extrafilter'
+                    },
+
+                ]
+            }))
+        }
+        function removefilters() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'deleterules'
+            }))
+        }
+    </script>
+</head>
+<body style="overflow-y: hidden">
+<div class="container-fluid text-center text-light bg-dark py-3">
+    <div class="row justify-content-center">
+        <div class="col-2"></div>
+        <div class="col-2">
+            <a href="https://mediafutures.no"><img class="img-fluid float-start mw-25" width="150" src="{% static 'MF_LOGOSimpleVersion_white.svg' %}" alt="logo"></a>
+        </div>
+        <div class="col">
+            <h1 class="display-3 text-light">LiveTweets</h1>
+        </div>
+        <div class="col-2"></div>
+        <div class="col-2"></div>
+    </div>
+</div>
+<div class="container-fluid mt-2" style="height: 800px">
+    <div class="row">
+        <div class="col-xl-3">
+            <h3 class="text-center">Controls</h3>
+            <div class="text-center">
+                <div class="mb-2">Status: <span id="status">Socket not connected</span></div>
+                <span>
+                    <button class="btn btn-primary btn-sm" id="connectbtn" onclick="websocketconnect();this.blur()">SOCKET</button>
+                    <button class="btn btn-primary btn-sm disabled" id="loadbtn" onclick="loadstream();this.blur()">STREAM</button>
+                    <button class="btn btn-success btn-sm disabled" id="startbtn" onclick="startstream();this.blur()">START</button>
+                    <button class="btn btn-danger btn-sm disabled" id="stopbtn" onclick="stopstream();this.blur()">STOP</button>
+                </span>
+            </div>
+            <h3 class="mt-3 text-center">
+                Stream Rules
+            </h3>
+            <div class="text-center">
+                <span>
+                    <button class="btn btn-primary btn-sm disabled" id="filtersbtn" onclick="applyfilters();this.blur()">Apply filters</button>
+                </span>
+            </div>
+            <div class="overflow-auto" style="height: 610px">
+                <div class="mb-3" id="customfilter">
+                    <label id="rule1label" for="rule1text" class="form-label">Custom Filter</label>
+                    <textarea class="form-control filtertext" id="rule1text" rows="5" maxlength="512"></textarea>
+                </div>
+                <div class="mb-3" id="hashtagsfilter">
+                    <label id="rule2label" for="rule2text" class="form-label">Hashtags Filter</label>
+                    <textarea class="form-control filtertext" id="rule2text" rows="5" maxlength="512"></textarea>
+                </div>
+                <div class="mb-3" id="mentionsfilter">
+                    <label id="rule3label" for="rule3text" class="form-label">Mentions Filter</label>
+                    <textarea class="form-control filtertext" id="rule3text" rows="5" maxlength="512"></textarea>
+                </div>
+                <div class="mb-3" id="contextsfilter">
+                    <label id="rule4label" for="rule4text" class="form-label">Context Filter</label>
+                    <textarea class="form-control filtertext" id="rule4text" rows="5" maxlength="512"></textarea>
+                </div>
+                <div class="mb-3" id="extrafilter">
+                    <label id="rule5label" for="rule5text" class="form-label">Extra Filter</label>
+                    <textarea class="form-control filtertext" id="rule5text" rows="5" maxlength="512"></textarea>
+                </div>
+                <div>
+                    <button class="btn btn-danger btn-sm disabled" id="removefiltersbtn" onclick="removefilters();this.blur()">Clear all and remove</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-xl-7 overflow-auto mh-100 overflow-auto" style="height: 800px">
+            <div class="row" style="height: 500px">
+                <div class="col-3 text-center">
+                    <h4>Hashtags</h4>
+                    <div class="col-12" id="hashtagdiv">
+                        <div id="hashtagtable"></div>
+                    </div>
+                </div>
+                <div class="col-3 text-center">
+                    <h4>Mentions</h4>
+                    <div class="col-12" id="mentiondiv">
+                        <div id="mentiontable"></div>
+                    </div>
+                </div>
+                <div class="col-6 text-center">
+                    <h4>Contexts</h4>
+                    <div class="col-12" id="contextdiv">
+                        <div id="contexttable"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h3>Trending Tweets</h3>
+                </div>
+            </div>
+            <div class="row text-center" style="height: 3000px">
+                <div class="col-4">
+                    <h6>3 minutes</h6>
+                    <p>
+                        <div id="3mincontainer"></div>
+                    </p>
+                </div>
+                <div class="col-4">
+                    <h6>1 minute</h6>
+                    <p>
+                        <div id="1mincontainer"></div>
+                    </p>
+                </div>
+                <div class="col-4">
+                    <h6>30 seconds</h6>
+                    <p>
+                        <div id="30scontainer"></div>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-xl-2 text-center">
+            <h3>Raw feed</h3>
+            <div class="overflow-auto mh-100" id="tweetfeed" style="height: 750px">
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>
