@@ -6,16 +6,23 @@ from asgiref.sync import sync_to_async
 from channels.layers import get_channel_layer
 from django.utils import timezone
 from collections import defaultdict
+from datetime import timedelta
 
-from datetime import datetime, timedelta
 
-
-# Helper functions for Django ORM - to be fed into sync_to_async in async loops
+""" Helper functions for Django ORM - to be fed into sync_to_async in async loops """
 def set_rules_to_inactive():
+    """
+    Sets the "active" attribute of all the StreamRules objects to False.
+    """
     StreamRules.objects.filter(active=True).update(active=False)
 
 
 def add_tweet_to_db(tweet):
+    """
+    Takes a tweet, creates a Tweet object of it. Also adds it as a TrackedTweet.
+    Also stores the Hashtags, Mentions and Contexts of the tweet or increments the ones stored.
+    :param tweet:
+    """
     tw = Tweet.objects.create(
                 id=str(tweet.id),
                 text=tweet.text,
@@ -97,6 +104,15 @@ def add_tweet_to_db(tweet):
 
 
 def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, quote_count):
+    """
+    Takes in the tweetid, timestamp and engagements of a tweet and stores it to the database
+    :param tweetid: The tweetid of the tweet to store
+    :param timestamp: The timestamp of when the tweet was checked
+    :param retweet_count: The amount of retweets at the time of checking
+    :param reply_count: The amount of replies at the time of checking
+    :param like_count: The amount of likes at the time of checking
+    :param quote_count: The amount of quotes at the time of checking
+    """
     TweetMetrics.objects.create(
         tweetid=Tweet.objects.get(id=tweetid),
         time=timestamp,
@@ -108,12 +124,28 @@ def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, q
 
 
 def get_tracked_tweets(starttime):
+    """
+    Gets the tweets to check for engagement.
+    Currently only gets the 100 most recent tweets.
+
+    TODO: More advanced filtering of the tweets to track:
+    TODO: Get tweet count, remove (old) unliked tweets and tweets with too low likes/update
+    TODO: (likes/update should probably look at more instances than just one update and rank by age)
+
+    :param starttime: Datetime object of when the tracking was started
+    :return: The IDs of the tweets to check the engagement of.
+    """
     tweets = TrackedTweet.objects.filter(created_at__gte=starttime).order_by("-created_at")[:99]
     ids = list(tweets.values_list('tweetid', flat=True))
     return ids
 
 
 def get_10_popular_h_m_c():
+    """
+    Gets the 10 most popular hashtags, mentions and contexts stored in the database, that is not already being tracked
+    with a filter.
+    :return: list of hashtags, list of mentions, dictionary of contexts and the occurrence of contexts.
+    """
     hashtags = list(Hashtag.objects.order_by("-count").values('hashtag', 'count'))
     mentions = Mention.objects.order_by("-count").values('mention', 'count')
     rules = StreamRules.objects.filter(active=True)
@@ -137,10 +169,14 @@ def get_10_popular_h_m_c():
     return htags[:10], mnames[:10], conts[:10]
 
 
-# The Filtered Stream class
+""" The Filtered Stream class, an instance of Tweepy's asynchronous streaming client """
 class LiveStream(AsyncStreamingClient):
 
     async def update_rules_from_twitter(self):
+        """
+        Gets the rules from twitter, sets existing rules to inactive, adds the rules received from twitter
+        to the database, and sends them to the channel group, to be forwarded by the consumer.
+        """
         rules = await self.get_rules()
         print('Rules: ', rules)
         channel_layer = get_channel_layer()
@@ -167,6 +203,22 @@ class LiveStream(AsyncStreamingClient):
             pass
 
     async def on_response(self, response):
+        """
+        Method for handling the data received from twitter:
+        In case of tweet (response.data):
+            Send the tweetid to the channel group (to be handled by the consumer)
+            Add the tweet to the database
+            Get the most popular hashtags mentions and contexts from the database
+            Send the hashtags, mentions and contexts to the channel group.
+
+            TODO: Also send the Username, UserID, Tweet text, creation time and any other fields needed to manually
+            TODO: create a tweet in a frontend.
+
+        Generally all tweets will also include the user. If they have media content this will be included in the
+        "includes" along with the user. This method goes on to add any media and the user to the database.
+
+        :param response: The response object from Tweepy
+        """
         if response.data:
             tweet = response.data
             matching_rules = response.matching_rules
@@ -224,9 +276,17 @@ class LiveStream(AsyncStreamingClient):
                     await sync_to_async(u.save)()
 
     async def on_errors(self, errors):
+        """
+        The error handling is currently limited. It is just being printed to the console.
+        :param errors: errors (dict) – The errors received
+        """
         print(errors)
 
     async def on_closed(self, resp):
+        """
+        If we lose the streaming connection, we send a message to the group channel to be handled by the consumer.
+        :param resp: response (aiohttp.ClientResponse) – The response from Twitter
+        """
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             'tweet',
@@ -237,6 +297,9 @@ class LiveStream(AsyncStreamingClient):
         )
 
     async def on_connect(self):
+        """
+        Upon connecting to Twitter, we send a message to the group channel to be handled by the consumer.
+        """
         channel_layer = get_channel_layer()
         print('Connected to Twitter')
         await channel_layer.group_send(
@@ -248,6 +311,9 @@ class LiveStream(AsyncStreamingClient):
         )
 
     async def on_connection_error(self):
+        """
+        If we cannot connect, we send a message to the group channel to be handled by the consumer.
+        """
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             'tweet',
@@ -258,6 +324,9 @@ class LiveStream(AsyncStreamingClient):
         )
 
     async def on_disconnect(self):
+        """
+        Upon disconnecting, we send a message to the group channel to be handled by the consumer.
+        """
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             'tweet',
@@ -268,6 +337,11 @@ class LiveStream(AsyncStreamingClient):
         )
 
     async def on_request_error(self, status_code):
+        """
+        Upon receiving a non-200 HTTP status code, we send a message to the group channel to be handled by the consumer.
+        This message contains the status code received
+        :param status_code: The HTTP status code encountered
+        """
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             'tweet',
@@ -280,10 +354,26 @@ class LiveStream(AsyncStreamingClient):
 
 class EngagementTracker:
     def __init__(self, bearer_token):
+        """
+        Upon initiating the engagement tracker, store the bearer token and set its tracking status to False.
+        :param bearer_token: Twitter API 2.0 Bearer Token.
+        """
         self.tracking = False
         self.bearer_token = bearer_token
 
     async def engagement_update(self, starttime):
+        """
+        Method to handle each update of the metrics.
+
+        Each time it is called, it collects the tweets to track from the database, initiates the Tweepy Client,
+        gets the tweets from the Twitter API, along with their public_metrics. It then sends the metrics, tweetid and
+        a timestamp of the current time to the update_metrics function.
+
+        Following this it collects metrics statistics from the database through the get_tweet_metrics function
+        before sending these metrics to the group channel to be handled by the consumer.
+
+        :param starttime: Datetime object of when the tracking was started.
+        """
         tweetids = await sync_to_async(get_tracked_tweets)(starttime)
         client = AsyncClient(self.bearer_token)
         tweets = await client.get_tweets(tweetids, tweet_fields=['public_metrics'])
@@ -309,6 +399,13 @@ class EngagementTracker:
         )
 
     async def periodic_update(self, __seconds: float, func, *args, **kwargs):
+        """
+        Function to periodically update the tweet metrics.
+        :param __seconds: Int of how often we want the metrics to update
+        :param func: The function to call
+        :param args: Arguments for the function
+        :param kwargs: Keyword arguments for the function
+        """
         while True:
             if not self.tracking:
                 break
@@ -319,7 +416,24 @@ class EngagementTracker:
 
 
 def get_tweet_metrics(timestamp, tweetids):
+    """
+    Function to collect metric statistics of the tweets.
 
+    It first deletes the metrics older than (currently) 4 minutes
+    It then grabs all stored metrics sorted by tweetid and time
+
+    It then goes through the results and adds the metrics for our tracked tweets to a dictionary, before checking
+    if we have enough updates for our tracked tweets to gather stats. If there are, the relevant statistics is added
+    to the dictionary.
+
+    Upon adding stats to any tracked tweets, we add the metrics to our result dictionary.
+    We then sort the metrics for each interval, before we finally add the 5 top results to a sorted list for each
+    interval in the res_sorted dictionary.
+
+    :param timestamp: datetime object of the time the EngagementTracker.engagement_update method was called
+    :param tweetids: The tweetids that are being tracked.
+    :return: Dictionary of lists for each interval
+    """
     old = TweetMetrics.objects.filter(time__lte=timestamp-timedelta(minutes=4))
     old.delete()
     metrics = TweetMetrics.objects.all().order_by('tweetid', '-time')
@@ -369,4 +483,9 @@ def get_tweet_metrics(timestamp, tweetids):
 
 
 def metric_count(count):
+    """
+    Method to sum the engagement metrics collected from twitter
+    :param count: TweetMetrics instance
+    :return: Summed metric counts.
+    """
     return count.retweet_count+count.reply_count+count.like_count+count.quote_count
