@@ -16,3 +16,4 @@ channels
 channels-redis
 uvicorn[standard]
 websockets
+redis

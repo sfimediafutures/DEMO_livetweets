@@ -6,6 +6,7 @@ from os import environ
 from tweepy import TweepyException, StreamRule
 from .models import StreamRules, Tweet
 from .livetweets import LiveStream, EngagementTracker, set_rules_to_inactive
+from django.core.cache import caches
 
 TWITTER_BEARER_TOKEN = environ['TWITTER_BEARER_TOKEN']
 
@@ -38,6 +39,8 @@ class TweetConsumer(AsyncWebsocketConsumer):
         """
         In addition to the inbuilt functions, we are also giving the consumers variables we need for some of
         the operations we want to perform.
+        STREAM is for storing the instatiated streaming object
+        session is for storing the session of which the stream was instantiated (not implemented)
         :param args:
         :param kwargs:
         """
@@ -104,7 +107,6 @@ class TweetConsumer(AsyncWebsocketConsumer):
                     expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
                     place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
                     media_fields=['url', 'preview_image_url'])
-                print(res)
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'Stream connecting'}))
@@ -190,6 +192,8 @@ class TweetConsumer(AsyncWebsocketConsumer):
         :param event: The message received over the group channel.
         """
         print('Tweet: ', event)
+        print(caches)
+
         await self.send(text_data=json.dumps({
             'type': event['type'],
             'id': event['id'],
@@ -227,7 +231,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
 
     async def hmc(self, event):
         """
-        When receiving hashtags mentions and contexts, forward them over the websocket.
+        When receiving hashtags, mentions and contexts, forward them over the websocket.
         :param event: The message received over the group channel.
         """
         await self.send(text_data=json.dumps({

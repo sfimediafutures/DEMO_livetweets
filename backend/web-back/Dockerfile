@@ -1,6 +1,6 @@
 # backend/web-back/Dockerfile
 # set base image
-FROM python:3.7
+FROM python:3.10
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1

@@ -9,6 +9,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="twitter:widgets:autoload" content="off">
+    <meta name="twitter:dnt" content="on">
+    <meta name="twitter:widgets:csp" content="on">
+
     <title>LiveTweets</title>
     <link rel="icon" type="image/x-icon" href={% static 'favicon.ico' %}>
     <script>
@@ -45,6 +49,7 @@
             console.log(data)
             let tweetfeed = document.getElementById('tweetfeed');
             let tweetframe = document.createElement('blockquote');
+            tweetfeed.insertBefore(tweetframe, tweetfeed.firstChild);
             if (data.type === 'tweet') {
             twttr.widgets.createTweet(data.id, tweetframe, {
                 conversation: 'all',
@@ -52,8 +57,10 @@
                 theme: 'light',
                 dnt: 'true',
                 align: 'center'
-            }).then(tweetfeed.insertBefore(tweetframe, tweetfeed.firstChild));
+            });
+            console.log(tweetfeed.childElementCount);
             if (tweetfeed.childElementCount > 10) {
+                console.log(tweetfeed.childElementCount);
                 tweetfeed.removeChild(tweetfeed.lastChild);
             }
             }
