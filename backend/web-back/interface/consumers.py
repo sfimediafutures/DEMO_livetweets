@@ -192,7 +192,6 @@ class TweetConsumer(AsyncWebsocketConsumer):
         :param event: The message received over the group channel.
         """
         print('Tweet: ', event)
-        print(caches)
 
         await self.send(text_data=json.dumps({
             'type': event['type'],

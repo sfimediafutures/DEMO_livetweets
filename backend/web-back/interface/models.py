@@ -142,5 +142,19 @@ class TrackedTweet(models.Model):
     metrics_per_update = models.IntegerField()
 
 
+class Team(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=150)
+
+
+class Match(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=150)
+    hometeam = models.ForeignKey(Team, on_delete=models.CASCADE)
+    awayteam = models.ForeignKey(Team, on_delete=models.CASCADE)
+    date = models.DateField(auto_now=False, auto_now_add=False)
+    time = models.TimeField(auto_now=False, auto_now_add=False)
+    rule = models.ForeignKey(StreamRules, on_delete=models.SET_NULL)
+
 
 
