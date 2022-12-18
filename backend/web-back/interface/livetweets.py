@@ -174,12 +174,15 @@ def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, q
     oldmetrics = TweetMetrics.objects.filter(tweetid=tweetid, match=match).order_by('-time')
     if oldmetrics:
         engagement_sum = retweet_count + reply_count + like_count + quote_count
-        tt = TrackedTweet.objects.get(tweetid=tweetid, match=match)
-        if engagement_sum:
-            tt.metrics_per_update = (engagement_sum)/len(oldmetrics)
-        else:
-            tt.metrics_per_update = -len(oldmetrics)
-        tt.save()
+        try:
+            tt = TrackedTweet.objects.get(tweetid=tweetid, match=match)
+            if engagement_sum:
+                tt.metrics_per_update = (engagement_sum)/len(oldmetrics)
+            else:
+                tt.metrics_per_update = -len(oldmetrics)
+            tt.save()
+        except TrackedTweet.DoesNotExist:
+            pass
 
 
 def get_tracked_tweets(timestamp, match):
@@ -190,7 +193,7 @@ def get_tracked_tweets(timestamp, match):
     :param starttime: Datetime object of when the tracking was started
     :return: The IDs of the tweets to check the engagement of.
     """
-    TrackedTweet.objects.filter(created_at__lt=timestamp - timedelta(minutes=5), match=match).delete()
+    TrackedTweet.objects.filter(created_at__lt=timestamp - timedelta(minutes=4), match=match).delete()
     tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "-created_at")
 
     to_be_deleted = []
