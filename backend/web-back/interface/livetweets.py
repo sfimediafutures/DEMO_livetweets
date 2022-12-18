@@ -240,6 +240,9 @@ def get_10_popular_h_m_c():
 
 """ The Filtered Stream class, an instance of Tweepy's asynchronous streaming client """
 class LiveStream(AsyncStreamingClient):
+    def __init__(self, bearer_token, **kwargs):
+        super().__init__(bearer_token, **kwargs)
+        self.filtering = False
 
     async def update_rules_from_twitter(self):
         """
@@ -378,6 +381,7 @@ class LiveStream(AsyncStreamingClient):
                 "message": "Streaming"
             }
         )
+        self.filtering = True
 
     async def on_connection_error(self):
         """
@@ -404,6 +408,7 @@ class LiveStream(AsyncStreamingClient):
                 "message": "Stream disconnected"
             }
         )
+        self.filtering = False
 
     async def on_request_error(self, status_code):
         """

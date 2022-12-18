@@ -85,7 +85,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'type': 'status',
             'stream': 'Stream initiated'}))
 
-        if self.STREAM is None:
+        if self.STREAM.filtering is False:
             try:
                 res = self.STREAM.filter(
                     tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
@@ -101,6 +101,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': f'{TweepyException}'}))
+
 
 
 
