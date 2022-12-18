@@ -86,25 +86,21 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'stream': 'Stream initiated'}))
 
         if self.STREAM is None:
-            await self.send(text_data=json.dumps({
-                'type': 'status',
-                'stream': 'No active stream'}))
-            return
-        try:
-            res = self.STREAM.filter(
-                tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
-                              'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
-                              'public_metrics', 'reply_settings', 'source', 'withheld'],
-                expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
-                place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
-                media_fields=['url', 'preview_image_url'])
-            await self.send(text_data=json.dumps({
-                'type': 'status',
-                'stream': 'Stream connecting'}))
-        except TweepyException:
-            await self.send(text_data=json.dumps({
-                'type': 'status',
-                'stream': f'{TweepyException}'}))
+            try:
+                res = self.STREAM.filter(
+                    tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
+                                  'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
+                                  'public_metrics', 'reply_settings', 'source', 'withheld'],
+                    expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
+                    place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
+                    media_fields=['url', 'preview_image_url'])
+                await self.send(text_data=json.dumps({
+                    'type': 'status',
+                    'stream': 'Stream connecting'}))
+            except TweepyException:
+                await self.send(text_data=json.dumps({
+                    'type': 'status',
+                    'stream': f'{TweepyException}'}))
 
 
 
@@ -226,10 +222,10 @@ class TweetConsumer(AsyncWebsocketConsumer):
         channel.
         :param code: The disconnection code received from the websocket
         """
-        self.engagement_tracker.tracking = False
-        if self.STREAM is not None:
-            self.STREAM.disconnect()
-        await self.channel_layer.group_discard('tweet', self.channel_name)
+        # self.engagement_tracker.tracking = False
+        # if self.STREAM is not None:
+        #     self.STREAM.disconnect()
+        # await self.channel_layer.group_discard('tweet', self.channel_name)
 
     async def tweet(self, event):
         """
