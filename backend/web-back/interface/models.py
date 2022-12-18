@@ -42,6 +42,18 @@ class ContextEntity(models.Model):
         return self.name
 
 
+class Context(models.Model):
+    name = models.CharField(max_length=255, primary_key=True)
+    domain_id = models.CharField(max_length=3)
+    domain_name = models.CharField(max_length=255)
+    entity_id = models.CharField(max_length=50)
+    entity_name = models.CharField(max_length=255)
+    count = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f'{self.domain_name}: {self.entity_name}'
+
+
 class Tweet(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     text = models.CharField(max_length=512)
@@ -65,19 +77,13 @@ class Tweet(models.Model):
     # withheld = dict | None  # Dict from JSON of the reason for a tweet being withheld
     hashtags = models.ManyToManyField(Hashtag)
     mentions = models.ManyToManyField(Mention)
-    context = models.ManyToManyField(ContextEntity)
+    context = models.ManyToManyField(Context)
 
     def __str__(self):
         return self.id
 
 
-class TweetMetrics(models.Model):
-    tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
-    time = models.DateTimeField()
-    retweet_count = models.IntegerField()
-    reply_count = models.IntegerField()
-    like_count = models.IntegerField()
-    quote_count = models.IntegerField()
+
 
 
 class ReferencedTweet(models.Model):
@@ -136,25 +142,49 @@ class MediaMetrics(models.Model):
     view_count = models.IntegerField()
 
 
-class TrackedTweet(models.Model):
-    tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
-    created_at = models.DateTimeField()
-    metrics_per_update = models.IntegerField()
-
-
 class Team(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150)
+    context = models.CharField(max_length=50, null=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Match(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150)
-    hometeam = models.ForeignKey(Team, on_delete=models.CASCADE)
-    awayteam = models.ForeignKey(Team, on_delete=models.CASCADE)
-    date = models.DateField(auto_now=False, auto_now_add=False)
-    time = models.TimeField(auto_now=False, auto_now_add=False)
-    rule = models.ForeignKey(StreamRules, on_delete=models.SET_NULL)
+    hometeam = models.ForeignKey(Team, related_name='hometeam', on_delete=models.SET_NULL, null=True)
+    awayteam = models.ForeignKey(Team, related_name='awayteam', on_delete=models.SET_NULL, null=True)
+    date = models.DateField(auto_now=False, auto_now_add=False, null=True)
+    time = models.TimeField(auto_now=False, auto_now_add=False, null=True)
+    context = models.CharField(max_length=50, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class TrackedTweet(models.Model):
+    tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
+    created_at = models.DateTimeField()
+    metrics_per_update = models.FloatField()
+    match = models.ForeignKey(Match, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f'{self.tweetid} - {self.match.name if self.match else "None"}'
+
+
+class TweetMetrics(models.Model):
+    tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
+    time = models.DateTimeField()
+    retweet_count = models.IntegerField()
+    reply_count = models.IntegerField()
+    like_count = models.IntegerField()
+    quote_count = models.IntegerField()
+    match = models.ForeignKey(Match, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return str(self.tweetid)
 
 
 

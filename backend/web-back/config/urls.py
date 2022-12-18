@@ -20,5 +20,6 @@ from interface import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
-    path('dashboard', views.dashboard, name='dashboard')
+    path('dashboard', views.dashboard, name='dashboard'),
+    path('dashboard2', views.dashboard2, name='dashboard2')
 ]

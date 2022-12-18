@@ -10,6 +10,8 @@ from datetime import timedelta
 
 
 """ Helper functions for Django ORM - to be fed into sync_to_async in async loops """
+
+
 def set_rules_to_inactive():
     """
     Sets the "active" attribute of all the StreamRules objects to False.
@@ -35,11 +37,8 @@ def add_tweet_to_db(tweet):
                 reply_settings=tweet.reply_settings,
                 source=tweet.source
             )
-    TrackedTweet.objects.create(
-        tweetid=tw,
-        created_at=tweet.created_at,
-        metrics_per_update=0
-    )
+    tt_created = False
+
     if tweet['entities']:
         if 'hashtags' in tweet['entities']:
             for hashtag in tweet['entities']['hashtags']:
@@ -76,34 +75,83 @@ def add_tweet_to_db(tweet):
                 tw.mentions.add(m)
 
     if 'context_annotations' in tweet:
+        m = None
         for context in tweet['context_annotations']:
-            d = None
+            noadd = False
+            context_name = f'{context["domain"]["id"]}.{context["entity"]["id"]}'
             try:
-                d = ContextDomain.objects.get(dom_id=context['domain']['id'])
-            except ContextDomain.DoesNotExist:
-                d = ContextDomain(
-                        dom_id=context['domain']['id'],
-                        name=context['domain']['name']
-                    )
-                d.save()
-            except ContextDomain.MultipleObjectsReturned:
-                print('Multiple Domains returned')
-            try:
-                e = ContextEntity.objects.get(ent_id=context['entity']['id'])
-                e.count += 1
-                e.save()
-            except ContextEntity.DoesNotExist:
-                e = ContextEntity(
-                    name=context['entity']['name'],
-                    ent_id=context['entity']['id'],
-                    domain=d,
+                c = Context.objects.get(name=context_name)
+                c.count += 1
+                c.save()
+            except Context.DoesNotExist:
+                c = Context(
+                    name=context_name,
+                    domain_id=context['domain']['id'],
+                    domain_name=context['domain']['name'],
+                    entity_id=context['entity']['id'],
+                    entity_name=context['entity']['name'],
                     count=1
+                )
+                c.save()
+            tw.context.add(c)
+
+            if context['domain']['name'] == 'Sports Team':
+                ct = f'*.{context["entity"]["id"]}'
+                try:
+                    t = Team.objects.get(context=ct)
+                except Team.DoesNotExist:
+                    t = Team(
+                        name=context["entity"]["name"],
+                        context=ct
                     )
-                e.save()
-            tw.context.add(e)
+                    t.save()
+                    print(f'Added Team: {context["entity"]["name"]}')
+
+            if context["domain"]["name"] == 'Soccer Match':
+                ct = f'*.{context["entity"]["id"]}'
+                if m is not None:
+                    print(f'New match {context["entity"]["name"]} found for tweet with match {m.name}')
+                    if ct == m.context:
+                        print('Skipping')
+                        continue
+                try:
+                    m = Match.objects.get(context=ct)
+                except Match.DoesNotExist:
+                    m = Match(
+                        name=context["entity"]["name"],
+                        hometeam=None,
+                        awayteam=None,
+                        date=None,
+                        time=None,
+                        context=ct
+                    )
+                    m.save()
+                    print(f'Added Match: {context["entity"]["name"]}')
+
+                tt = TrackedTweet(
+                    tweetid=tw,
+                    created_at=tweet.created_at,
+                    metrics_per_update=0,
+                    match=m
+                )
+                tt.save()
+                tt_created = True
+
+    if not tt_created:
+        tt = TrackedTweet(
+            tweetid=tw,
+            created_at=tweet.created_at,
+            metrics_per_update=0,
+            match=None
+        )
+        tt.save()
 
 
-def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, quote_count):
+
+
+
+
+def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, quote_count, match):
     """
     Takes in the tweetid, timestamp and engagements of a tweet and stores it to the database
     :param tweetid: The tweetid of the tweet to store
@@ -119,23 +167,43 @@ def update_metrics(tweetid, timestamp, retweet_count, reply_count, like_count, q
         retweet_count=retweet_count,
         reply_count=reply_count,
         like_count=like_count,
-        quote_count=quote_count
+        quote_count=quote_count,
+        match=match
     )
 
+    oldmetrics = TweetMetrics.objects.filter(tweetid=tweetid, match=match).order_by('-time')
+    if oldmetrics:
+        engagement_sum = retweet_count + reply_count + like_count + quote_count
+        tt = TrackedTweet.objects.get(tweetid=tweetid, match=match)
+        if engagement_sum:
+            tt.metrics_per_update = (engagement_sum)/len(oldmetrics)
+        else:
+            tt.metrics_per_update = -len(oldmetrics)
+        tt.save()
 
-def get_tracked_tweets(starttime):
+
+def get_tracked_tweets(timestamp, match):
     """
     Gets the tweets to check for engagement.
     Currently only gets the 100 most recent tweets.
 
-    TODO: More advanced filtering of the tweets to track:
-    TODO: Get tweet count, remove (old) unliked tweets and tweets with too low likes/update
-    TODO: (likes/update should probably look at more instances than just one update and rank by age)
-
     :param starttime: Datetime object of when the tracking was started
     :return: The IDs of the tweets to check the engagement of.
     """
-    tweets = TrackedTweet.objects.filter(created_at__gte=starttime).order_by("-created_at")[:99]
+    TrackedTweet.objects.filter(created_at__lt=timestamp - timedelta(minutes=5), match=match).delete()
+    tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "-created_at")
+
+    to_be_deleted = []
+    if tweets.count() > 100:
+        surplus = tweets.count() - 100
+        print(f'Surplus: {surplus}')
+
+        for i in range(surplus):
+            to_be_deleted.append(tweets[i].tweetid)
+            print(f'Added for deletion: {tweets[i].tweetid}: {tweets[i].created_at} - Score: {tweets[i].metrics_per_update}')
+
+    tweets.filter(tweetid__in=to_be_deleted).delete()
+
     ids = list(tweets.values_list('tweetid', flat=True))
     return ids
 
@@ -157,12 +225,13 @@ def get_10_popular_h_m_c():
     ctracked = [part[8:] for part in ruletext.replace('(', '').replace(')', '').split() if part.startswith('context:')]
     htags = [tag for tag in hashtags if tag['hashtag'] not in htracked]
     mnames = [name for name in mentions if name['mention'] not in mtracked]
-    cents = ContextEntity.objects.order_by("-count")
+    # cents = ContextEntity.objects.order_by("-count")
+    cents = Context.objects.order_by("-count")
     contexts = []
     for context in cents:
         c = dict()
-        c['name'] = f'{context.domain.name}: {context.name}'
-        c['id'] = f'{context.domain.dom_id}.{context.ent_id}'
+        c['name'] = f'{context.domain_name}: {context.entity_name}'
+        c['id'] = f'{context.domain_id}.{context.entity_id}'
         c['count'] = context.count
         contexts.append(c)
     conts = [cont for cont in contexts if cont['id'] not in ctracked]
@@ -361,7 +430,7 @@ class EngagementTracker:
         self.tracking = False
         self.bearer_token = bearer_token
 
-    async def engagement_update(self, starttime):
+    async def engagement_update(self, match):
         """
         Method to handle each update of the metrics.
 
@@ -374,27 +443,32 @@ class EngagementTracker:
 
         :param starttime: Datetime object of when the tracking was started.
         """
-        tweetids = await sync_to_async(get_tracked_tweets)(starttime)
-        client = AsyncClient(self.bearer_token)
-        tweets = await client.get_tweets(tweetids, tweet_fields=['public_metrics'])
         timestamp = timezone.now()
-        print(f"Engagement updated at {timestamp.strftime('%X')}")
-        for tweet in tweets[0]:                                         # Probably inefficient
-            await sync_to_async(update_metrics)(
-                tweetid=tweet.id,
-                timestamp=timestamp,
-                retweet_count=tweet.data['public_metrics']['retweet_count'],
-                reply_count=tweet.data['public_metrics']['reply_count'],
-                like_count=tweet.data['public_metrics']['like_count'],
-                quote_count=tweet.data['public_metrics']['quote_count']
-            )
-        results = await sync_to_async(get_tweet_metrics)(timestamp, tweetids)
+        tweetids = await sync_to_async(get_tracked_tweets)(timestamp, match)
+        client = AsyncClient(self.bearer_token)
+        if tweetids:
+            tweets = await client.get_tweets(tweetids, tweet_fields=['public_metrics'])
+            print(f"Engagement updated at {timestamp.strftime('%X')} - Match: {match.name}")
+            for tweet in tweets[0]:                                         # Probably inefficient
+                await sync_to_async(update_metrics)(
+                    tweetid=tweet.id,
+                    timestamp=timestamp,
+                    retweet_count=tweet.data['public_metrics']['retweet_count'],
+                    reply_count=tweet.data['public_metrics']['reply_count'],
+                    like_count=tweet.data['public_metrics']['like_count'],
+                    quote_count=tweet.data['public_metrics']['quote_count'],
+                    match=match
+                )
+            results = await sync_to_async(get_tweet_metrics)(timestamp, tweetids, match)
+        else:
+            results = None
         channel_layer = get_channel_layer()
         await channel_layer.group_send(
             'tweet',
             {
                 "type": "tweetmetrics",
-                "results": results
+                "results": results,
+                "match": match.id
             }
         )
 
@@ -415,7 +489,7 @@ class EngagementTracker:
             )
 
 
-def get_tweet_metrics(timestamp, tweetids):
+def get_tweet_metrics(timestamp, tweetids, match):
     """
     Function to collect metric statistics of the tweets.
 
@@ -434,9 +508,8 @@ def get_tweet_metrics(timestamp, tweetids):
     :param tweetids: The tweetids that are being tracked.
     :return: Dictionary of lists for each interval
     """
-    old = TweetMetrics.objects.filter(time__lte=timestamp-timedelta(minutes=4))
-    old.delete()
-    metrics = TweetMetrics.objects.all().order_by('tweetid', '-time')
+
+    metrics = TweetMetrics.objects.filter(time__gte=timestamp-timedelta(minutes=4), match=match).order_by('tweetid', '-time')
     tweetdict = defaultdict(list)
     res = dict()
     res_sorted = dict()

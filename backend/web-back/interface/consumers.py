@@ -4,7 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from os import environ
 from tweepy import TweepyException, StreamRule
-from .models import StreamRules, Tweet
+from .models import StreamRules, Tweet, Match
 from .livetweets import LiveStream, EngagementTracker, set_rules_to_inactive
 from django.core.cache import caches
 
@@ -58,6 +58,22 @@ class TweetConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add('tweet', self.channel_name)
         await self.accept()
 
+        matches = Match.objects.filter(name__in=['Croatia vs Morocco', 'Argentina vs France'])
+
+        matches_list = []
+
+        async for match in matches:
+            matchobj = {
+                'id': match.id,
+                'name': match.name
+            }
+            matches_list.append(matchobj)
+
+
+        await self.send(text_data=json.dumps({
+            'type': 'matchlist',
+            'matches': matches_list}))
+
     async def receive(self, text_data=None, bytes_data=None):
         """
         Catch incoming messages from the websocket and perform the associated task.
@@ -103,7 +119,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
                 res = self.STREAM.filter(
                     tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
                                   'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
-                                  'public_metrics', 'referenced_tweets', 'reply_settings', 'source', 'withheld'],
+                                  'public_metrics', 'reply_settings', 'source', 'withheld'],
                     expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
                     place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
                     media_fields=['url', 'preview_image_url'])
@@ -193,17 +209,20 @@ class TweetConsumer(AsyncWebsocketConsumer):
         """
         print('Tweet: ', event)
 
-        await self.send(text_data=json.dumps({
-            'type': event['type'],
-            'id': event['id'],
-            'filters': event['filters']
-        }))
+        # await self.send(text_data=json.dumps({
+        #     'type': event['type'],
+        #     'id': event['id'],
+        #     'filters': event['filters']
+        # }))
         if not self.engagement_tracker.tracking:
             self.engagement_tracker.tracking = True
             a = asyncio.get_event_loop()
-            starttime = await sync_to_async(get_tweet_time)(event['id'])
+            match = await Match.objects.aget(name='Argentina vs France')
             a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
-                                                                  starttime=starttime))
+                                                                  match=match))
+            match = await Match.objects.aget(name='Croatia vs Morocco')
+            a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
+                                                                  match=match))
 
     async def status(self, event):
         """
@@ -233,12 +252,12 @@ class TweetConsumer(AsyncWebsocketConsumer):
         When receiving hashtags, mentions and contexts, forward them over the websocket.
         :param event: The message received over the group channel.
         """
-        await self.send(text_data=json.dumps({
-            'type': event['type'],
-            'hashtags': event['hashtags'],
-            'mentions': event['mentions'],
-            'contexts': event['contexts']
-        }))
+        # await self.send(text_data=json.dumps({
+        #     'type': event['type'],
+        #     'hashtags': event['hashtags'],
+        #     'mentions': event['mentions'],
+        #     'contexts': event['contexts']
+        # }))
 
     async def tweetmetrics(self, event):
         """
@@ -247,6 +266,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         """
         await self.send(text_data=json.dumps({
             'type': event['type'],
-            'results': event['results']
+            'results': event['results'],
+            'match': event['match']
         }))
 

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+{% load static %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% bootstrap_messages %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="twitter:widgets:autoload" content="off">
+    <meta name="twitter:dnt" content="on">
+    <meta name="twitter:widgets:csp" content="on">
+
+    <title>LiveTweets</title>
+    <link rel="icon" type="image/x-icon" href={% static 'favicon.ico' %}>
+    <script>
+        window.twttr = (function(d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0],
+            t = window.twttr || {};
+          if (d.getElementById(id)) return t;
+          js = d.createElement(s);
+          js.id = id;
+          js.src = "https://platform.twitter.com/widgets.js";
+          fjs.parentNode.insertBefore(js, fjs);
+
+          t._e = [];
+          t.ready = function(f) {
+            t._e.push(f);
+          };
+
+          return t;
+        }(document, "script", "twitter-wjs"));
+        let tweetSocket = null;
+        function websocketconnect() {
+        tweetSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/tweets'
+        );
+        tweetSocket.onopen = function () {
+            document.getElementById('status').innerHTML = 'Connected to backend';
+            document.getElementById("connectbtn").classList.add('disabled');
+            document.getElementById("loadbtn").classList.remove('disabled');
+        }
+        tweetSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log(data)
+            const groups = ['3min', '1min', '30s']
+    if (data.type === 'matchlist') {
+                let matchrow = document.getElementById("matchrow");
+                matchrow.innerHTML = '';
+                data.matches.forEach( function(e) {
+                    let matchid = e.id.toString()
+                    let contcol = document.createElement("div")
+                    let namerow = document.createElement("div")
+                    let namecol = document.createElement("div")
+                    let namehead = document.createElement("h3")
+                    contcol.className = "col-auto overflow-auto"
+                    namerow.className = "row"
+                    namecol.className = "col-12 text-center"
+                    namehead.innerHTML = e.name
+
+                    namecol.appendChild(namehead)
+                    namerow.appendChild(namecol)
+                    contcol.appendChild(namerow)
+
+                    let metricrow = document.createElement("div")
+                    metricrow.className = "row text-center";
+                    metricrow.style.height = "3000px";
+                    groups.forEach( function(e, ) {
+                        let contcoltime = document.createElement("div")
+                        let title = document.createElement("h6")
+                        switch (e) {
+                            case "3min":
+                                title.innerHTML = "3 minutes"
+                                break
+                            case "1min":
+                                title.innerHTML = "1 minute"
+                                break
+                            case "30s":
+                                title.innerHTML = "30 seconds"
+                        }
+                        let metricp = document.createElement("p")
+                        let metriccont = document.createElement("div")
+                        metriccont.id = e+"container"+"_"+matchid
+                        contcoltime.className = "col-4"
+                        contcoltime.style.width = "280px"
+
+
+                        metricp.appendChild(metriccont)
+                        contcoltime.appendChild(title)
+                        contcoltime.appendChild(metricp)
+                        metricrow.appendChild(contcoltime)
+                    })
+                    contcol.appendChild(metricrow)
+                    matchrow.appendChild(contcol)
+                    }
+                )
+            }
+            if (data.type === 'tweet') {
+
+            }
+            if (data.type === 'status') {
+                document.getElementById('status').innerHTML = data.stream;
+
+            }
+            if (data.type === 'rule') {
+                const ruleframe = document.getElementById(data.tag);
+                ruleframe.children[1].innerHTML = data.filter;
+            }
+            if (data.type === 'hmc') {
+                }
+            if (data.type === 'rulestatus') {
+                if (data.stream === 'No rules stored in stream') {
+                    let textareas = Array.from(document.getElementsByClassName('filtertext'));
+                    textareas.map(x => x.value = '');
+
+                }
+            }
+            if (data.type === 'tweetmetrics') {
+                console.log(data.match)
+                let cont_30 = document.getElementById('30scontainer'+'_'+data.match);
+                let cont_60 = document.getElementById('1mincontainer'+'_'+data.match);
+                let cont_180 = document.getElementById('3mincontainer'+'_'+data.match);
+                let ncont_30 = document.createElement("div");
+                let ncont_60 = document.createElement("div");
+                let ncont_180 = document.createElement("div");
+                ncont_30.id = '30scontainer'+'_'+data.match;
+                ncont_60.id = '1mincontainer'+'_'+data.match;
+                ncont_180.id = '3mincontainer'+'_'+data.match;
+                let tweetframe_30 = document.createElement('div');
+                let tweetframe_60 = document.createElement('div');
+                let tweetframe_180 = document.createElement('div');
+                data.results['30'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '275',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_30.append(tweetframe);
+                });
+                ncont_30.append(tweetframe_30);
+                data.results['60'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '275',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_60.append(tweetframe);
+
+                });
+                ncont_60.append(tweetframe_60);
+                data.results['180'].forEach( function(e) {
+                    let tweetframe = document.createElement('blockquote');
+                    tweetframe.id = e.id;
+                    twttr.widgets.createTweet(e.id, tweetframe, {
+                        conversation: 'all',
+                        width: '275',
+                        theme: 'light',
+                        dnt: 'true',
+                        align: 'center'
+                    });
+                    tweetframe_180.append(tweetframe);
+
+                });
+                ncont_180.append(tweetframe_180);
+                cont_30.parentNode.replaceChild(ncont_30, cont_30);
+                cont_60.parentNode.replaceChild(ncont_60, cont_60);
+                cont_180.parentNode.replaceChild(ncont_180, cont_180);
+            }
+        };
+        tweetSocket.onclose = function () {
+            document.getElementById('status').innerHTML = 'Socket not connected'
+            document.getElementById("connectbtn").classList.remove('disabled');
+            document.getElementById("startbtn").classList.add('disabled');
+            document.getElementById("stopbtn").classList.add('disabled');
+        };
+        }
+        function loadstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'loadstream'
+            }))
+            document.getElementById("loadbtn").classList.add('disabled');
+            document.getElementById("startbtn").classList.remove('disabled');
+            document.getElementById("filtersbtn").classList.remove('disabled');
+            document.getElementById("removefiltersbtn").classList.remove('disabled');
+        }
+        function startstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'startstream'
+            }))
+            document.getElementById("stopbtn").classList.remove('disabled');
+        }
+        function stopstream() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'stopstream'
+            }))
+        }
+        function applyfilters() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'rulelist',
+                'rules': [
+                    {
+                        'value': document.getElementById('rule1text').value,
+                        'tag': 'customfilter'
+                    },
+                ]
+            }))
+        }
+        function removefilters() {
+            tweetSocket.send(JSON.stringify({
+                'type': 'deleterules'
+            }))
+        }
+    </script>
+</head>
+<body class="vh-100 overflow-auto" style="overflow-y: hidden">
+<div class="container-fluid text-center text-light bg-dark py-3">
+    <div class="row justify-content-center">
+        <div class="col-2"></div>
+        <div class="col-2">
+            <a href="https://mediafutures.no"><img class="img-fluid float-start mw-25" width="150" src="{% static 'MF_LOGOSimpleVersion_white.svg' %}" alt="logo"></a>
+        </div>
+        <div class="col">
+            <h1 class="display-3 text-light">LiveTweets</h1>
+        </div>
+        <div class="col-2"></div>
+        <div class="col-2"></div>
+    </div>
+</div>
+<div class="container-fluid mt-2" style="height: 800px">
+    <div class="row">
+        <div class="col-xl-3">
+            <h3 class="text-center">Controls</h3>
+            <div class="text-center">
+                <div class="mb-2">Status: <span id="status">Socket not connected</span></div>
+                <span>
+                    <button class="btn btn-primary btn-sm" id="connectbtn" onclick="websocketconnect();this.blur()">SOCKET</button>
+                    <button class="btn btn-primary btn-sm disabled" id="loadbtn" onclick="loadstream();this.blur()">STREAM</button>
+                    <button class="btn btn-success btn-sm disabled" id="startbtn" onclick="startstream();this.blur()">START</button>
+                    <button class="btn btn-danger btn-sm disabled" id="stopbtn" onclick="stopstream();this.blur()">STOP</button>
+                </span>
+            </div>
+
+            </div>
+        <div class="col-xl-3">
+            <h3 class="text-center">
+                Stream Rules
+            </h3>
+            <div class="text-center">
+                <span>
+                    <button class="btn btn-primary btn-sm disabled" id="filtersbtn" onclick="applyfilters();this.blur()">Apply filters</button>
+                </span>
+            </div>
+            <div class="mb-3" id="customfilter">
+                    <label id="rule1label" for="rule1text" class="form-label">Custom Filter</label>
+                    <textarea class="form-control filtertext" id="rule1text" rows="5" maxlength="512"></textarea>
+                </div>
+            <div>
+                <button class="btn btn-danger btn-sm disabled" id="removefiltersbtn" onclick="removefilters();this.blur()">Clear all and remove</button>
+            </div>
+        </div>
+    </div>
+    <div class="row flex-row flex-nowrap" id="matchrow">
+
+    </div>
+
+</div>
+
+</body>
+</html>
