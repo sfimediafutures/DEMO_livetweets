@@ -193,7 +193,7 @@ def get_tracked_tweets(timestamp, match):
     :param starttime: Datetime object of when the tracking was started
     :return: The IDs of the tweets to check the engagement of.
     """
-    TrackedTweet.objects.filter(created_at__gt=timestamp - timedelta(minutes=4), match=match).delete()
+    TrackedTweet.objects.filter(created_at__lt=timestamp-timedelta(minutes=4), match=match).delete()
     tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "-created_at")
 
     to_be_deleted = []
