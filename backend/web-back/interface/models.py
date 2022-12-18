@@ -165,6 +165,7 @@ class Match(models.Model):
 
 
 class TrackedTweet(models.Model):
+    id = models.AutoField(primary_key=True)
     tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     created_at = models.DateTimeField()
     metrics_per_update = models.FloatField()

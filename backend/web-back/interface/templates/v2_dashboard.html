@@ -33,7 +33,7 @@
           return t;
         }(document, "script", "twitter-wjs"));
         let tweetSocket = null;
-        function websocketconnect() {
+
         tweetSocket = new WebSocket(
             'ws://'
             + window.location.host
@@ -103,21 +103,16 @@
 
             }
             if (data.type === 'status') {
-                document.getElementById('status').innerHTML = data.stream;
+               ;
 
             }
             if (data.type === 'rule') {
-                const ruleframe = document.getElementById(data.tag);
-                ruleframe.children[1].innerHTML = data.filter;
+
             }
             if (data.type === 'hmc') {
                 }
             if (data.type === 'rulestatus') {
-                if (data.stream === 'No rules stored in stream') {
-                    let textareas = Array.from(document.getElementsByClassName('filtertext'));
-                    textareas.map(x => x.value = '');
 
-                }
             }
             if (data.type === 'tweetmetrics') {
                 console.log(data.match)
@@ -180,47 +175,20 @@
             }
         };
         tweetSocket.onclose = function () {
-            document.getElementById('status').innerHTML = 'Socket not connected'
-            document.getElementById("connectbtn").classList.remove('disabled');
-            document.getElementById("startbtn").classList.add('disabled');
-            document.getElementById("stopbtn").classList.add('disabled');
+            document.getElementById('Matchrow').innerHTML = 'Stream error please reload page'
         };
-        }
         function loadstream() {
-            tweetSocket.send(JSON.stringify({
-                'type': 'loadstream'
-            }))
-            document.getElementById("loadbtn").classList.add('disabled');
-            document.getElementById("startbtn").classList.remove('disabled');
-            document.getElementById("filtersbtn").classList.remove('disabled');
-            document.getElementById("removefiltersbtn").classList.remove('disabled');
         }
         function startstream() {
-            tweetSocket.send(JSON.stringify({
-                'type': 'startstream'
-            }))
-            document.getElementById("stopbtn").classList.remove('disabled');
         }
         function stopstream() {
-            tweetSocket.send(JSON.stringify({
-                'type': 'stopstream'
-            }))
+
         }
         function applyfilters() {
-            tweetSocket.send(JSON.stringify({
-                'type': 'rulelist',
-                'rules': [
-                    {
-                        'value': document.getElementById('rule1text').value,
-                        'tag': 'customfilter'
-                    },
-                ]
-            }))
+
         }
         function removefilters() {
-            tweetSocket.send(JSON.stringify({
-                'type': 'deleterules'
-            }))
+
         }
     </script>
 </head>
@@ -239,38 +207,7 @@
     </div>
 </div>
 <div class="container-fluid mt-2" style="height: 800px">
-    <div class="row">
-        <div class="col-xl-3">
-            <h3 class="text-center">Controls</h3>
-            <div class="text-center">
-                <div class="mb-2">Status: <span id="status">Socket not connected</span></div>
-                <span>
-                    <button class="btn btn-primary btn-sm" id="connectbtn" onclick="websocketconnect();this.blur()">SOCKET</button>
-                    <button class="btn btn-primary btn-sm disabled" id="loadbtn" onclick="loadstream();this.blur()">STREAM</button>
-                    <button class="btn btn-success btn-sm disabled" id="startbtn" onclick="startstream();this.blur()">START</button>
-                    <button class="btn btn-danger btn-sm disabled" id="stopbtn" onclick="stopstream();this.blur()">STOP</button>
-                </span>
-            </div>
 
-            </div>
-        <div class="col-xl-3">
-            <h3 class="text-center">
-                Stream Rules
-            </h3>
-            <div class="text-center">
-                <span>
-                    <button class="btn btn-primary btn-sm disabled" id="filtersbtn" onclick="applyfilters();this.blur()">Apply filters</button>
-                </span>
-            </div>
-            <div class="mb-3" id="customfilter">
-                    <label id="rule1label" for="rule1text" class="form-label">Custom Filter</label>
-                    <textarea class="form-control filtertext" id="rule1text" rows="5" maxlength="512"></textarea>
-                </div>
-            <div>
-                <button class="btn btn-danger btn-sm disabled" id="removefiltersbtn" onclick="removefilters();this.blur()">Clear all and remove</button>
-            </div>
-        </div>
-    </div>
     <div class="row flex-row flex-nowrap" id="matchrow">
 
     </div>

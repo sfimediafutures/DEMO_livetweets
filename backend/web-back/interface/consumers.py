@@ -74,6 +74,40 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'type': 'matchlist',
             'matches': matches_list}))
 
+        if self.STREAM is not None:
+            await self.send(text_data=json.dumps({
+                'type': 'status',
+                'stream': 'Stream already initiated'}))
+            return
+        self.STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
+        await self.STREAM.update_rules_from_twitter()
+        await self.send(text_data=json.dumps({
+            'type': 'status',
+            'stream': 'Stream initiated'}))
+
+        if self.STREAM is None:
+            await self.send(text_data=json.dumps({
+                'type': 'status',
+                'stream': 'No active stream'}))
+            return
+        try:
+            res = self.STREAM.filter(
+                tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
+                              'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
+                              'public_metrics', 'reply_settings', 'source', 'withheld'],
+                expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
+                place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
+                media_fields=['url', 'preview_image_url'])
+            await self.send(text_data=json.dumps({
+                'type': 'status',
+                'stream': 'Stream connecting'}))
+        except TweepyException:
+            await self.send(text_data=json.dumps({
+                'type': 'status',
+                'stream': f'{TweepyException}'}))
+
+
+
     async def receive(self, text_data=None, bytes_data=None):
         """
         Catch incoming messages from the websocket and perform the associated task.

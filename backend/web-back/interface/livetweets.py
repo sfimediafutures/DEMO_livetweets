@@ -199,10 +199,10 @@ def get_tracked_tweets(timestamp, match):
         print(f'Surplus: {surplus}')
 
         for i in range(surplus):
-            to_be_deleted.append(tweets[i].tweetid)
-            print(f'Added for deletion: {tweets[i].tweetid}: {tweets[i].created_at} - Score: {tweets[i].metrics_per_update}')
+            to_be_deleted.append(tweets[i].id)
+            print(f'Added for deletion: {tweets[i].id}: {tweets[i].created_at} - Score: {tweets[i].metrics_per_update}')
 
-    tweets.filter(tweetid__in=to_be_deleted).delete()
+    tweets.filter(id__in=to_be_deleted).delete()
 
     ids = list(tweets.values_list('tweetid', flat=True))
     return ids
