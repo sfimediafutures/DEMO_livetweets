@@ -193,8 +193,10 @@ def get_tracked_tweets(timestamp, match):
     :param starttime: Datetime object of when the tracking was started
     :return: The IDs of the tweets to check the engagement of.
     """
-    TrackedTweet.objects.filter(created_at__lt=timestamp-timedelta(minutes=4), match=match).delete()
-    tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "-created_at")
+    timecheck = timestamp-timedelta(minutes=4)
+    print(timecheck.strftime("%H:%M:%S"))
+    TrackedTweet.objects.filter(created_at__lt=timecheck, match=match).delete()
+    tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "created_at")
 
     to_be_deleted = []
     if tweets.count() > 100:
@@ -517,7 +519,10 @@ def get_tweet_metrics(timestamp, tweetids, match):
     :return: Dictionary of lists for each interval
     """
 
-    metrics = TweetMetrics.objects.filter(time__gte=timestamp-timedelta(minutes=4), match=match).order_by('tweetid', '-time')
+
+    timecheck = timestamp-timedelta(minutes=4)
+    print('TweetMetrics time stamp: ' + timecheck.strftime("%H:%M:%S"))
+    metrics = TweetMetrics.objects.filter(time__gte=timecheck, match=match).order_by('tweetid', '-time')
     tweetdict = defaultdict(list)
     res = dict()
     res_sorted = dict()
