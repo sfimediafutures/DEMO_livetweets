@@ -115,9 +115,9 @@ def add_tweet_to_db(tweet):
                         print('Skipping')
                         continue
                 try:
-                    m = Match.objects.get(context=ct)
-                except Match.DoesNotExist:
-                    m = Match(
+                    m = Event.objects.get(context=ct)
+                except Event.DoesNotExist:
+                    m = Event(
                         name=context["entity"]["name"],
                         hometeam=None,
                         awayteam=None,

@@ -17,7 +17,7 @@ admin.site.register(ContextDomain)
 admin.site.register(TrackedTweet)
 admin.site.register(Context)
 admin.site.register(Team)
-admin.site.register(Match)
+admin.site.register(Event)
 
 
 # Register your models here.

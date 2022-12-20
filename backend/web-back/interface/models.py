@@ -151,7 +151,7 @@ class Team(models.Model):
         return self.name
 
 
-class Match(models.Model):
+class Event(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150)
     hometeam = models.ForeignKey(Team, related_name='hometeam', on_delete=models.SET_NULL, null=True)
@@ -159,6 +159,7 @@ class Match(models.Model):
     date = models.DateField(auto_now=False, auto_now_add=False, null=True)
     time = models.TimeField(auto_now=False, auto_now_add=False, null=True)
     context = models.CharField(max_length=50, null=True)
+    Tracked = models.BooleanField()
 
     def __str__(self):
         return self.name
@@ -169,7 +170,7 @@ class TrackedTweet(models.Model):
     tweetid = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     created_at = models.DateTimeField()
     metrics_per_update = models.FloatField()
-    match = models.ForeignKey(Match, on_delete=models.SET_NULL, null=True)
+    match = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f'{self.tweetid} - {self.match.name if self.match else "None"}'
@@ -182,7 +183,7 @@ class TweetMetrics(models.Model):
     reply_count = models.IntegerField()
     like_count = models.IntegerField()
     quote_count = models.IntegerField()
-    match = models.ForeignKey(Match, on_delete=models.SET_NULL, null=True)
+    match = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return str(self.tweetid)

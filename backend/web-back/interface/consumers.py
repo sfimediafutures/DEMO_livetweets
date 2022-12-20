@@ -4,7 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from os import environ
 from tweepy import TweepyException, StreamRule
-from .models import StreamRules, Tweet, Match
+from .models import StreamRules, Tweet, Event
 from .livetweets import LiveStream, EngagementTracker, set_rules_to_inactive
 from django.core.cache import caches
 
@@ -60,7 +60,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add('tweet', self.channel_name)
         await self.accept()
 
-        matches = Match.objects.filter(name__in=['Croatia vs Morocco', 'Argentina vs France'])
+        matches = Event.objects.filter(tracked=True)
 
         matches_list = []
 
@@ -250,10 +250,10 @@ class TweetConsumer(AsyncWebsocketConsumer):
         if not self.engagement_tracker.tracking:
             self.engagement_tracker.tracking = True
             a = asyncio.get_event_loop()
-            match = await Match.objects.aget(name='Argentina vs France')
+            match = await Event.objects.aget(name='Argentina vs France')
             a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                   match=match))
-            match = await Match.objects.aget(name='Croatia vs Morocco')
+            match = await Event.objects.aget(name='Croatia vs Morocco')
             a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                   match=match))
 
