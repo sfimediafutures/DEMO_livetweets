@@ -107,7 +107,7 @@ def add_tweet_to_db(tweet):
                     t.save()
                     print(f'Added Team: {context["entity"]["name"]}')
 
-            if context["domain"]["name"] == 'Soccer Match':
+            if context["domain"]["name"] == 'Sports Event':
                 ct = f'*.{context["entity"]["id"]}'
                 if m is not None:
                     print(f'New match {context["entity"]["name"]} found for tweet with match {m.name}')
