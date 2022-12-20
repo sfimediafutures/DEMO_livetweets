@@ -60,7 +60,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add('tweet', self.channel_name)
         await self.accept()
 
-        matches = Event.objects.filter(Tracked=True)
+        matches = Event.objects.filter(tracked=True)
 
         matches_list = []
 
