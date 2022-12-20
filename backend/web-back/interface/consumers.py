@@ -264,9 +264,10 @@ class TweetConsumer(AsyncWebsocketConsumer):
                 print("No Tracked Events")
 
             if events_found:
-                for event in events:
+                async for event in events:
+                    e = await event.afirst()
                     a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
-                                                                          match=event))
+                                                                          match=e))
                 # match = await Event.objects.aget(name='Argentina vs France')
                 # a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                 #                                                       match=match))
