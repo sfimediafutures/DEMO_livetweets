@@ -255,13 +255,14 @@ class TweetConsumer(AsyncWebsocketConsumer):
             a = asyncio.get_event_loop()
 
             try:
-                Event.objects.filter(tracked=True)
+                events = Event.objects.filter(tracked=True)
 
             except Event.DoesNotExist:
+                events = False
                 print("No Tracked Events")
 
-            if Event.filter(tracked=True):
-                for event in Event.filter(tracked=True):
+            if events:
+                for event in events:
                     a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                           match=event))
                 # match = await Event.objects.aget(name='Argentina vs France')
