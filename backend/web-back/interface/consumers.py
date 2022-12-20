@@ -60,7 +60,10 @@ class TweetConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add('tweet', self.channel_name)
         await self.accept()
 
-        matches = Event.objects.filter(tracked=True)
+        try:
+            matches = Event.objects.filter(tracked=True)
+        except Event.DoesNotExist:
+            print("No tracked matches")
 
         matches_list = []
 
