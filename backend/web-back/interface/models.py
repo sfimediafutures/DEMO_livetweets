@@ -159,7 +159,7 @@ class Event(models.Model):
     date = models.DateField(auto_now=False, auto_now_add=False, null=True)
     time = models.TimeField(auto_now=False, auto_now_add=False, null=True)
     context = models.CharField(max_length=50, null=True)
-    Tracked = models.BooleanField()
+    tracked = models.BooleanField()
 
     def __str__(self):
         return self.name
