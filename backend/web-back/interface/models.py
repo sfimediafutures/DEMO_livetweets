@@ -154,11 +154,11 @@ class Team(models.Model):
 class Event(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150)
-    hometeam = models.ForeignKey(Team, related_name='hometeam', on_delete=models.SET_NULL, null=True)
-    awayteam = models.ForeignKey(Team, related_name='awayteam', on_delete=models.SET_NULL, null=True)
-    date = models.DateField(auto_now=False, auto_now_add=False, null=True)
-    time = models.TimeField(auto_now=False, auto_now_add=False, null=True)
-    context = models.CharField(max_length=50, null=True)
+    hometeam = models.ForeignKey(Team, related_name='hometeam', on_delete=models.SET_NULL, null=True, blank=True)
+    awayteam = models.ForeignKey(Team, related_name='awayteam', on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField(auto_now=False, auto_now_add=False, null=True, blank=True)
+    time = models.TimeField(auto_now=False, auto_now_add=False, null=True, blank=True)
+    context = models.CharField(max_length=50, null=True, blank=True)
     tracked = models.BooleanField(default=False)
 
     def __str__(self):
