@@ -10,7 +10,7 @@ from django.core.cache import caches
 
 TWITTER_BEARER_TOKEN = environ['TWITTER_BEARER_TOKEN']
 
-STREAM = None
+# STREAM = None
 
 """ Helper functions for sync_to_async """
 def get_dupe_rule_ids(tag):
@@ -47,7 +47,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         :param kwargs:
         """
         super().__init__(*args, **kwargs)
-        self.STREAM = STREAM
+        self.STREAM = None
         self.session = None
         self.engagement_tracker = EngagementTracker(TWITTER_BEARER_TOKEN)
 
