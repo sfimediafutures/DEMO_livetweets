@@ -73,7 +73,7 @@ class Tweet(models.Model):
     # public_metrics = dict | None  # Handled by the TweetMetrics model
     # referenced_tweets = list[ReferencedTweet] | None
     reply_settings = models.CharField(default=None, max_length=255)
-    source = models.CharField(default=None, max_length=255)
+    source = models.CharField(default=None, max_length=255, null=True)
     # withheld = dict | None  # Dict from JSON of the reason for a tweet being withheld
     hashtags = models.ManyToManyField(Hashtag)
     mentions = models.ManyToManyField(Mention)
