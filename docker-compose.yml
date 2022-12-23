@@ -30,12 +30,18 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - static_volume:/code/staticfiles # <-- bind the static volume
+      - ./code/certbot/conf:/etc/letsencrypt
+      - ./code/certbot/www:/var/www/certbot
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - web-back
     networks:
       - backend_network
+
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx_back -s reload; done & nginx_back -g \"daemon off;\"'"
+
   db:
     build: ./mysql
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -52,6 +58,13 @@ services:
       - ./sql:/docker-entrypoint-initdb.d
     networks:
       - backend_network
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 
 networks:
