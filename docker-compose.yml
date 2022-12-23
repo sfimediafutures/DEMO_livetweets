@@ -30,8 +30,8 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - static_volume:/code/staticfiles # <-- bind the static volume
-      - ./data/certbot/conf:/etc/letsencrypt/
-      - ./data/certbot/www:/var/www/certbot/
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
     ports:
       - "80:80"
       - "443:443"
@@ -61,9 +61,8 @@ services:
   certbot:
     image: certbot/certbot
     volumes:
-      - ./data/certbot/conf:/etc/letsencrypt/
-      - ./data/certbot/www:/var/www/certbot/
-      - /docker-volumes/var/log/letsencrypt:/var/log/letsencrypt
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
 
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
