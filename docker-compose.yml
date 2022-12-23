@@ -63,6 +63,7 @@ services:
     volumes:
       - ./data/certbot/conf:/etc/letsencrypt/
       - ./data/certbot/www:/var/www/certbot/
+      - /docker-volumes/var/log/letsencrypt:/var/log/letsencrypt
 
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
