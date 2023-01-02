@@ -78,14 +78,14 @@ class TweetConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'matchlist',
             'matches': matches_list}))
-
+        print('Hello')
         if self.STREAM is not None:
+            print('Nope')
             await self.send(text_data=json.dumps({
                 'type': 'status',
                 'stream': 'Stream already initiated'}))
             return
         self.STREAM = STREAM
-        print('Hello')
         print(STREAM)
         await self.STREAM.update_rules_from_twitter()
         await self.send(text_data=json.dumps({
