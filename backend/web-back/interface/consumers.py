@@ -102,7 +102,9 @@ class TweetConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'Stream connecting'}))
+                print('Success')
             except TweepyException:
+                print(TweepyException)
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': f'{TweepyException}'}))
@@ -159,10 +161,12 @@ class TweetConsumer(AsyncWebsocketConsumer):
                     expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
                     place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
                     media_fields=['url', 'preview_image_url'])
+                print('Filtering')
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'Stream connecting'}))
             except TweepyException:
+                print(TweepyException)
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': f'{TweepyException}'}))
