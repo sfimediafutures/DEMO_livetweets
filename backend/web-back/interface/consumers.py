@@ -91,6 +91,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'stream': 'Stream initiated'}))
 
         if self.STREAM.filtering is False:
+            print('Not filtering')
             try:
                 res = self.STREAM.filter(
                     tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
