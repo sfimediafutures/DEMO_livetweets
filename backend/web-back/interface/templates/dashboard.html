@@ -35,7 +35,7 @@
         let tweetSocket = null;
         function websocketconnect() {
         tweetSocket = new WebSocket(
-            'ws://'
+            'wss://'
             + window.location.host
             + '/ws/tweets'
         );
