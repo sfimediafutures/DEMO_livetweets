@@ -11,6 +11,7 @@ from django.core.cache import caches
 TWITTER_BEARER_TOKEN = environ['TWITTER_BEARER_TOKEN']
 
 STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
+ENGAGEMENT_TRACKER = EngagementTracker(TWITTER_BEARER_TOKEN)
 
 """ Helper functions for sync_to_async """
 def get_dupe_rule_ids(tag):
@@ -49,7 +50,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.STREAM = STREAM
         self.session = None
-        self.engagement_tracker = EngagementTracker(TWITTER_BEARER_TOKEN)
+        self.engagement_tracker = ENGAGEMENT_TRACKER
 
     async def connect(self):
         """
@@ -79,7 +80,6 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'type': 'matchlist',
             'matches': matches_list}))
 
-        self.STREAM = STREAM
         await self.STREAM.update_rules_from_twitter()
         await self.send(text_data=json.dumps({
             'type': 'status',
