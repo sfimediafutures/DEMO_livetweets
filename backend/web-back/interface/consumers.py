@@ -48,9 +48,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         :param kwargs:
         """
         super().__init__(*args, **kwargs)
-        self.STREAM = STREAM
         self.session = None
-        self.engagement_tracker = ENGAGEMENT_TRACKER
 
     async def connect(self):
         """
@@ -80,15 +78,14 @@ class TweetConsumer(AsyncWebsocketConsumer):
             'type': 'matchlist',
             'matches': matches_list}))
 
-        await self.STREAM.update_rules_from_twitter()
+        await STREAM.update_rules_from_twitter()
         await self.send(text_data=json.dumps({
             'type': 'status',
             'stream': 'Stream initiated'}))
 
-        if self.STREAM.filtering is False:
-            print('Not filtering')
+        if STREAM.filtering is False:
             try:
-                res = self.STREAM.filter(
+                res = STREAM.filter(
                     tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
                                   'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
                                   'public_metrics', 'reply_settings', 'source', 'withheld'],
@@ -133,24 +130,24 @@ class TweetConsumer(AsyncWebsocketConsumer):
         print('Receive: ', text_data)
         data = json.loads(text_data)
         if data['type'] == 'loadstream':
-            if self.STREAM is not None:
+            if STREAM is not None:
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'Stream already initiated'}))
                 return
-            self.STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
-            await self.STREAM.update_rules_from_twitter()
+            STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
+            await STREAM.update_rules_from_twitter()
             await self.send(text_data=json.dumps({
                 'type': 'status',
                 'stream': 'Stream initiated'}))
         if data['type'] == 'startstream':
-            if self.STREAM is None:
+            if STREAM is None:
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'No active stream'}))
                 return
             try:
-                res = self.STREAM.filter(
+                res = STREAM.filter(
                     tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
                                   'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
                                   'public_metrics', 'reply_settings', 'source', 'withheld'],
@@ -168,18 +165,18 @@ class TweetConsumer(AsyncWebsocketConsumer):
                     'stream': f'{TweepyException}'}))
 
         if data['type'] == 'stopstream':
-            if self.STREAM is None:
+            if STREAM is None:
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'No active stream'}))
                 return
-            self.STREAM.disconnect()
+            STREAM.disconnect()
             await self.send(
                 text_data=json.dumps({'type': 'status', 'stream': 'Disconnect signal sent'}))
-            self.engagement_tracker.tracking = False
+            ENGAGEMENT_TRACKER.tracking = False
 
         if data['type'] == 'rulelist':
-            if self.STREAM is None:
+            if STREAM is None:
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'No active stream'}))
@@ -198,23 +195,23 @@ class TweetConsumer(AsyncWebsocketConsumer):
                         dupes.append(id)
                     rulelist.append(r)
             if dupes:
-                await self.STREAM.delete_rules(dupes)
-            await self.STREAM.add_rules(rulelist)
-            await self.STREAM.update_rules_from_twitter()
+                await STREAM.delete_rules(dupes)
+            await STREAM.add_rules(rulelist)
+            await STREAM.update_rules_from_twitter()
 
         if data['type'] == 'deleterules':
-            if self.STREAM is None:
+            if STREAM is None:
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'No active stream'}))
                 return
             ids = list()
-            rules = await self.STREAM.get_rules()
+            rules = await STREAM.get_rules()
             if rules[0] is not None:
                 for rule in rules[0]:
                     ids.append(rule.id)
-                await self.STREAM.delete_rules(ids)
-                rules = await self.STREAM.get_rules()
+                await STREAM.delete_rules(ids)
+                rules = await STREAM.get_rules()
             if rules.data is None:
                 await self.send(text_data=json.dumps({
                     'type': 'rulestatus',
@@ -228,9 +225,9 @@ class TweetConsumer(AsyncWebsocketConsumer):
         channel.
         :param code: The disconnection code received from the websocket
         """
-        # self.engagement_tracker.tracking = False
-        # if self.STREAM is not None:
-        #     self.STREAM.disconnect()
+        # ENGAGEMENT_TRACKER.tracking = False
+        # if STREAM is not None:
+        #     STREAM.disconnect()
         # await self.channel_layer.group_discard('tweet', self.channel_name)
 
     async def tweet(self, event):
@@ -250,8 +247,8 @@ class TweetConsumer(AsyncWebsocketConsumer):
         #     'id': event['id'],
         #     'filters': event['filters']
         # }))
-        if not self.engagement_tracker.tracking:
-            self.engagement_tracker.tracking = True
+        if not ENGAGEMENT_TRACKER.tracking:
+            ENGAGEMENT_TRACKER.tracking = True
             a = asyncio.get_event_loop()
 
             events_found = False
@@ -265,13 +262,13 @@ class TweetConsumer(AsyncWebsocketConsumer):
 
             if events_found:
                 async for event in events:
-                    a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
+                    a.create_task(ENGAGEMENT_TRACKER.periodic_update(30, ENGAGEMENT_TRACKER.engagement_update,
                                                                           match=event))
                 # match = await Event.objects.aget(name='Argentina vs France')
-                # a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
+                # a.create_task(ENGAGEMENT_TRACKER.periodic_update(30, ENGAGEMENT_TRACKER.engagement_update,
                 #                                                       match=match))
                 # match = await Event.objects.aget(name='Croatia vs Morocco')
-                # a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
+                # a.create_task(ENGAGEMENT_TRACKER.periodic_update(30, ENGAGEMENT_TRACKER.engagement_update,
                 #                                                   match=match))
 
     async def status(self, event):
