@@ -265,8 +265,10 @@ class TweetConsumer(AsyncWebsocketConsumer):
 
             if events_found:
                 async for event in events:
-                    a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
+
+                    event = a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                           match=event))
+                    print(event)
 
     async def status(self, event):
         """

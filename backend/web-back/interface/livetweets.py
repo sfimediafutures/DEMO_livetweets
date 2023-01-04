@@ -493,11 +493,10 @@ class EngagementTracker:
         while True:
             if not self.tracking:
                 break
-            xx = await asyncio.gather(
+            await asyncio.gather(
                 asyncio.sleep(__seconds),
                 func(*args, **kwargs)
             )
-            print(xx)
 
 
 def get_tweet_metrics(timestamp, tweetids, match):
