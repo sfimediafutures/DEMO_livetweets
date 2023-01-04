@@ -194,7 +194,6 @@ def get_tracked_tweets(timestamp, match):
     :return: The IDs of the tweets to check the engagement of.
     """
     timecheck = timestamp-timedelta(minutes=4)
-    print(timecheck.strftime("%H:%M:%S"))
     TrackedTweet.objects.filter(created_at__lt=timecheck, match=match).delete()
     tweets = TrackedTweet.objects.filter(match=match).order_by("metrics_per_update", "created_at")
 
@@ -453,6 +452,9 @@ class EngagementTracker:
 
         :param starttime: Datetime object of when the tracking was started.
         """
+        pending = asyncio.all_tasks()
+        for task in pending:
+            print(task)
         timestamp = timezone.now()
         tweetids = await sync_to_async(get_tracked_tweets)(timestamp, match)
         client = AsyncClient(self.bearer_token)
@@ -521,7 +523,6 @@ def get_tweet_metrics(timestamp, tweetids, match):
 
 
     timecheck = timestamp-timedelta(minutes=4)
-    print('TweetMetrics time stamp: ' + timecheck.strftime("%H:%M:%S"))
     metrics = TweetMetrics.objects.filter(time__gte=timecheck, match=match).order_by('tweetid', '-time')
     tweetdict = defaultdict(list)
     res = dict()
