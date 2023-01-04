@@ -244,6 +244,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
         :param event: The message received over the group channel.
         """
         print('Tweet: ', event)
+        print(asyncio.Task.all_tasks())
 
         # await self.send(text_data=json.dumps({
         #     'type': event['type'],
@@ -268,7 +269,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
 
                     event = a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                           match=event))
-                    print(event)
+
 
     async def status(self, event):
         """
