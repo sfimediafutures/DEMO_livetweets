@@ -493,10 +493,11 @@ class EngagementTracker:
         while True:
             if not self.tracking:
                 break
-            await asyncio.gather(
+            xx = await asyncio.gather(
                 asyncio.sleep(__seconds),
                 func(*args, **kwargs)
             )
+            print(xx)
 
 
 def get_tweet_metrics(timestamp, tweetids, match):
@@ -570,7 +571,7 @@ def get_tweet_metrics(timestamp, tweetids, match):
 
 def metric_count(count):
     """
-    Method to sum the engagement metrics collected from twitter
+    Function to sum the engagement metrics collected from twitter
     :param count: TweetMetrics instance
     :return: Summed metric counts.
     """

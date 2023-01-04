@@ -132,94 +132,94 @@ class TweetConsumer(AsyncWebsocketConsumer):
         """
         print('Receive: ', text_data)
         data = json.loads(text_data)
-        if data['type'] == 'loadstream':
-            if self.STREAM is not None:
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'Stream already initiated'}))
-                return
-            self.STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
-            await self.STREAM.update_rules_from_twitter()
-            await self.send(text_data=json.dumps({
-                'type': 'status',
-                'stream': 'Stream initiated'}))
-        if data['type'] == 'startstream':
-            if self.STREAM is None:
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'No active stream'}))
-                return
-            try:
-                res = self.STREAM.filter(
-                    tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
-                                  'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
-                                  'public_metrics', 'reply_settings', 'source', 'withheld'],
-                    expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
-                    place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
-                    media_fields=['url', 'preview_image_url'])
-                print('Filtering')
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'Stream connecting'}))
-            except TweepyException:
-                print(TweepyException)
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': f'{TweepyException}'}))
-
-        if data['type'] == 'stopstream':
-            if self.STREAM is None:
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'No active stream'}))
-                return
-            self.STREAM.disconnect()
-            await self.send(
-                text_data=json.dumps({'type': 'status', 'stream': 'Disconnect signal sent'}))
-            self.engagement_tracker.tracking = False
-
-        if data['type'] == 'rulelist':
-            if self.STREAM is None:
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'No active stream'}))
-                return
-            rulelist = list()
-            dupes = list()
-
-            for rule in data['rules']:
-                if rule['value']:
-                    r = StreamRule(
-                        value=rule['value'],
-                        tag=rule['tag'],
-                    )
-                    ids = await sync_to_async(get_dupe_rule_ids)(rule['tag'])
-                    for id in ids:
-                        dupes.append(id)
-                    rulelist.append(r)
-            if dupes:
-                await self.STREAM.delete_rules(dupes)
-            await self.STREAM.add_rules(rulelist)
-            await self.STREAM.update_rules_from_twitter()
-
-        if data['type'] == 'deleterules':
-            if self.STREAM is None:
-                await self.send(text_data=json.dumps({
-                    'type': 'status',
-                    'stream': 'No active stream'}))
-                return
-            ids = list()
-            rules = await self.STREAM.get_rules()
-            if rules[0] is not None:
-                for rule in rules[0]:
-                    ids.append(rule.id)
-                await self.STREAM.delete_rules(ids)
-                rules = await self.STREAM.get_rules()
-            if rules.data is None:
-                await self.send(text_data=json.dumps({
-                    'type': 'rulestatus',
-                    'stream': 'No rules stored in stream'}))
-                await sync_to_async(set_rules_to_inactive)()
+        # if data['type'] == 'loadstream':
+        #     if self.STREAM is not None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'Stream already initiated'}))
+        #         return
+        #     self.STREAM = LiveStream(bearer_token=TWITTER_BEARER_TOKEN)
+        #     await self.STREAM.update_rules_from_twitter()
+        #     await self.send(text_data=json.dumps({
+        #         'type': 'status',
+        #         'stream': 'Stream initiated'}))
+        # if data['type'] == 'startstream':
+        #     if self.STREAM is None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'No active stream'}))
+        #         return
+        #     try:
+        #         res = self.STREAM.filter(
+        #             tweet_fields=['id', 'text', 'attachments', 'author_id', 'context_annotations', 'conversation_id',
+        #                           'created_at', 'entities', 'geo', 'in_reply_to_user_id', 'lang', 'possibly_sensitive',
+        #                           'public_metrics', 'reply_settings', 'source', 'withheld'],
+        #             expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
+        #             place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
+        #             media_fields=['url', 'preview_image_url'])
+        #         print('Filtering')
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'Stream connecting'}))
+        #     except TweepyException:
+        #         print(TweepyException)
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': f'{TweepyException}'}))
+        #
+        # if data['type'] == 'stopstream':
+        #     if self.STREAM is None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'No active stream'}))
+        #         return
+        #     self.STREAM.disconnect()
+        #     await self.send(
+        #         text_data=json.dumps({'type': 'status', 'stream': 'Disconnect signal sent'}))
+        #     self.engagement_tracker.tracking = False
+        #
+        # if data['type'] == 'rulelist':
+        #     if self.STREAM is None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'No active stream'}))
+        #         return
+        #     rulelist = list()
+        #     dupes = list()
+        #
+        #     for rule in data['rules']:
+        #         if rule['value']:
+        #             r = StreamRule(
+        #                 value=rule['value'],
+        #                 tag=rule['tag'],
+        #             )
+        #             ids = await sync_to_async(get_dupe_rule_ids)(rule['tag'])
+        #             for id in ids:
+        #                 dupes.append(id)
+        #             rulelist.append(r)
+        #     if dupes:
+        #         await self.STREAM.delete_rules(dupes)
+        #     await self.STREAM.add_rules(rulelist)
+        #     await self.STREAM.update_rules_from_twitter()
+        #
+        # if data['type'] == 'deleterules':
+        #     if self.STREAM is None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'status',
+        #             'stream': 'No active stream'}))
+        #         return
+        #     ids = list()
+        #     rules = await self.STREAM.get_rules()
+        #     if rules[0] is not None:
+        #         for rule in rules[0]:
+        #             ids.append(rule.id)
+        #         await self.STREAM.delete_rules(ids)
+        #         rules = await self.STREAM.get_rules()
+        #     if rules.data is None:
+        #         await self.send(text_data=json.dumps({
+        #             'type': 'rulestatus',
+        #             'stream': 'No rules stored in stream'}))
+        #         await sync_to_async(set_rules_to_inactive)()
 
     async def disconnect(self, code):
         """
@@ -267,12 +267,6 @@ class TweetConsumer(AsyncWebsocketConsumer):
                 async for event in events:
                     a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
                                                                           match=event))
-                # match = await Event.objects.aget(name='Argentina vs France')
-                # a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
-                #                                                       match=match))
-                # match = await Event.objects.aget(name='Croatia vs Morocco')
-                # a.create_task(self.engagement_tracker.periodic_update(30, self.engagement_tracker.engagement_update,
-                #                                                   match=match))
 
     async def status(self, event):
         """
