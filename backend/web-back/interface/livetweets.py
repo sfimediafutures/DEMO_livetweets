@@ -452,9 +452,9 @@ class EngagementTracker:
 
         :param starttime: Datetime object of when the tracking was started.
         """
-        pending = asyncio.all_tasks()
-        for task in pending:
-            print(task)
+        # pending = asyncio.all_tasks()
+        # for task in pending:
+        #     print(task)
         timestamp = timezone.now()
         tweetids = await sync_to_async(get_tracked_tweets)(timestamp, match)
         client = AsyncClient(self.bearer_token)

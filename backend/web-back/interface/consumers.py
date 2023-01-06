@@ -94,7 +94,7 @@ class TweetConsumer(AsyncWebsocketConsumer):
                     expansions=['entities.mentions.username', 'geo.place_id', 'author_id', 'attachments.media_keys'],
                     place_fields=['contained_within', 'country', 'country_code', 'full_name', 'name', 'place_type'],
                     media_fields=['url', 'preview_image_url'])
-                print(self.STREAM.task)
+                # print(self.STREAM.task)
                 await self.send(text_data=json.dumps({
                     'type': 'status',
                     'stream': 'Stream connecting'}))
